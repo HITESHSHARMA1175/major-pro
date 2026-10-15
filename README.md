@@ -123,6 +123,10 @@ mediapipe
 pyautogui
 ```
 
+The program also requires the `face_landmarker.task` model file in the project
+directory. It is included in this repository and is used by MediaPipe's Tasks
+API.
+
 ---
 
 ## ⚠️ Notes & Calibration Tips

@@ -2,8 +2,18 @@ import cv2
 import mediapipe
 import pyautogui
 import time
+from pathlib import Path
 
-face_mesh = mediapipe.solutions.face_mesh.FaceMesh(refine_landmarks=True)
+model_path = Path(__file__).with_name("face_landmarker.task")
+base_options = mediapipe.tasks.BaseOptions(model_asset_path=str(model_path))
+landmarker_options = mediapipe.tasks.vision.FaceLandmarkerOptions(
+    base_options=base_options,
+    running_mode=mediapipe.tasks.vision.RunningMode.IMAGE,
+    num_faces=1,
+)
+face_landmarker = mediapipe.tasks.vision.FaceLandmarker.create_from_options(
+    landmarker_options
+)
 cam = cv2.VideoCapture(0)
 screen_w, screen_h = pyautogui.size()
 
@@ -14,16 +24,23 @@ click_cooldown = 1  # sec
 scroll_cooldown = 1  # sec
 
 while True:
-    _, image = cam.read()
+    success, image = cam.read()
+    if not success:
+        print("Unable to read from the webcam")
+        break
+
     image = cv2.flip(image, 1)
     window_h, window_w, _ = image.shape
     rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    mp_image = mediapipe.Image(
+        image_format=mediapipe.ImageFormat.SRGB, data=rgb_image
+    )
 
-    output = face_mesh.process(rgb_image)
-    landmarks_set = output.multi_face_landmarks
+    output = face_landmarker.detect(mp_image)
+    landmarks_set = output.face_landmarks
 
     if landmarks_set:
-        landmarks = landmarks_set[0].landmark
+        landmarks = landmarks_set[0]
 
         # === Cursor Movement with Right Eye Iris ===
         for id, lm in enumerate(landmarks[474:478]):
@@ -78,6 +95,7 @@ while True:
         break
 
 cam.release()
+face_landmarker.close()
 cv2.destroyAllWindows()
 
 
